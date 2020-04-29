@@ -61,7 +61,17 @@ class Crawler(requests.Session):
         :return: list of link elements - <a> tags
         """
         if unique:
-            return list(set(page.xpath(f'.//a[contains(@href, "{domain_root}")]')))[:count]
+            seen = set()
+            links = []
+            link_count = 0
+            for link in page.xpath(f'.//a[contains(@href, "{domain_root}")]'):
+                if link.get('href') not in seen:
+                    seen.add(link.get('href'))
+                    links.append(link)
+                    link_count += 1
+                if link_count == count:
+                    return links
+            return links
         return page.xpath(f'.//a[contains(@href, "{domain_root}")]')[:count]
 
     def normalize_file_name(self, file_name):
@@ -71,6 +81,8 @@ class Crawler(requests.Session):
         :return: normalized name
         """
         normalized_name = re.sub('[^0-9a-zA-Z]', '_', file_name).strip('_')
+        if not normalized_name:
+            normalized_name = "root"
         if normalized_name in self.seen_names:
             # Repeat name, add a count to it
             normalized_name = f"{normalized_name}_{self.seen_names[normalized_name] + 1}"
